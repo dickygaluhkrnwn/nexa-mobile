@@ -1,24 +1,38 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { Stack } from "expo-router"; // <-- Menggunakan Stack lebih stabil dari Slot
+import { StatusBar } from "expo-status-bar";
+import { LogBox } from "react-native";
+import { ThemeProvider } from "../components/ThemeProvider";
+import { PomodoroTimer } from "../components/todo/pomodoro-timer";
+import { ChatWidget } from "../components/ui/chat-widget"; // <-- IMPORT CHAT WIDGET
+import "../global.css";
+import { AuthProvider } from "../lib/auth-context";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// =====================================================================
+// MEMBUNGKAM WARNING EXPO GO (SDK 53)
+// Cukup gunakan LogBox. Jangan pernah menimpa (override) console.error 
+// karena bisa merusak sistem React Navigation saat aplikasi me-render ulang!
+// =====================================================================
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  'Android Push notifications (remote notifications)'
+]);
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <StatusBar style="auto" />
+        
+        {/* Menggunakan Stack agar Navigation Context terjamin aman di seluruh aplikasi */}
+        <Stack screenOptions={{ headerShown: false }} /> 
+        
+        {/* Pomodoro Global: Di-mount di lapisan terluar aplikasi agar tidak pernah hilang! */}
+        <PomodoroTimer />
+
+        {/* Asisten AI Global: Di-mount di lapisan terluar agar melayang di semua halaman */}
+        <ChatWidget />
+        
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
