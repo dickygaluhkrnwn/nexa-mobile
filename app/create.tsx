@@ -44,14 +44,12 @@ export default function CreateNoteScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [editorKey, setEditorKey] = useState(1);
 
-  // FIX: Tambahkan setParentId ke destructuring
   const {
     title, setTitle, content, setContent, tags, setTags, tagInput, setTagInput,
     isHidden, setIsHidden, parentId, setParentId, handleAddTag, removeTag
   } = useNoteForm();
 
   // --- FIX KEYBOARD TERTUTUP (INFINITE RELOAD WEBVIEW) ---
-  // Menggunakan useRef agar nilai initialContent tidak berubah setiap kali user mengetik 1 huruf
   const initialContentRef = useRef(content);
   useEffect(() => {
     // Hanya perbarui initial text (yang memicu reload) saat AI selesai bekerja (editorKey berubah)
@@ -163,7 +161,7 @@ export default function CreateNoteScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       
-      {/* HEADER DENGAN TOMBOL PRIVASI */}
+      {/* HEADER */}
       <View className="px-4 py-3 flex-row items-center justify-between border-b border-border/50 bg-background/90 z-10">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-muted">
@@ -172,19 +170,16 @@ export default function CreateNoteScreen() {
         </View>
 
         <View className="flex-row items-center">
+          {/* FIX UI: TOMBOL PRIVASI PINDAH KE HEADER (IKON SAJA) */}
           <TouchableOpacity 
             onPress={() => setIsHidden(!isHidden)} 
-            activeOpacity={0.7}
-            className="flex-row items-center px-3 py-1.5 rounded-full border mr-3 transition-colors"
+            className="p-2 rounded-full border transition-colors mr-2"
             style={{ 
-              backgroundColor: isHidden ? '#a855f715' : cardBgColor, 
-              borderColor: isHidden ? '#a855f750' : borderColor 
+              backgroundColor: isHidden ? '#a855f715' : 'transparent', 
+              borderColor: isHidden ? '#a855f750' : 'transparent' 
             }}
           >
-            {isHidden ? <Lock color="#a855f7" size={14} style={{ marginRight: 6 }} /> : <Unlock color={mutedColor} size={14} style={{ marginRight: 6 }} />}
-            <CustomText className="text-[10px] font-bold uppercase tracking-widest" style={{ color: isHidden ? '#a855f7' : mutedColor }}>
-              {isHidden ? "Brankas" : "Publik"}
-            </CustomText>
+            {isHidden ? <Lock color="#a855f7" size={18} /> : <Unlock color={mutedColor} size={18} />}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleSave} disabled={isSaving} className="flex-row items-center px-4 py-2 rounded-full shadow-sm" style={{ backgroundColor: primaryHex }}>
@@ -200,6 +195,20 @@ export default function CreateNoteScreen() {
         keyboardShouldPersistTaps="handled"
       >
         
+        {/* FIX UI: AREA BREADCRUMB PARENT NOTE (MIPIR NOTION) */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowParentModal(true)}
+          className="flex-row items-center mb-1.5 self-start"
+        >
+          <FolderTree color={mutedColor} size={14} style={{ marginRight: 6 }} />
+          <CustomText className="text-xs font-bold" style={{ color: parentId ? primaryHex : mutedColor }}>
+            {parentId
+              ? `${availableNotes.find(n => n.id === parentId)?.title || "Terpilih"} /`
+              : "Catatan Utama /"}
+          </CustomText>
+        </TouchableOpacity>
+
         {/* INPUT JUDUL */}
         <TextInput
           placeholder="Judul Catatan..."
@@ -238,21 +247,6 @@ export default function CreateNoteScreen() {
             />
           </View>
         </View>
-
-        {/* --- AREA PILIH INDUK (PARENT NOTE) --- */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setShowParentModal(true)}
-          className="flex-row items-center px-3 py-2.5 rounded-xl border mb-4 self-start shadow-sm"
-          style={{ backgroundColor: isDark ? '#27272a50' : '#f4f4f5', borderColor: borderColor }}
-        >
-          <FolderTree color={mutedColor} size={16} />
-          <CustomText className="text-xs font-bold ml-2" style={{ color: parentId ? textColor : mutedColor }}>
-            {parentId
-              ? `Induk: ${availableNotes.find(n => n.id === parentId)?.title || "Terpilih"}`
-              : "Catatan Utama (Bukan Sub-Catatan)"}
-          </CustomText>
-        </TouchableOpacity>
 
         {/* TAMPILKAN LOADING BAR BESAR JIKA SEDANG SCANNING OCR */}
         {isScanning && (
@@ -316,7 +310,7 @@ export default function CreateNoteScreen() {
           </CustomText>
           <RichTextEditor 
             key={`editor-${editorKey}`} 
-            initialContent={initialContentRef.current} // FIX: Gunakan Ref agar tidak infinite loop refresh
+            initialContent={initialContentRef.current} 
             onChange={(html) => setContent(html)} 
             placeholder="Mulai menulis idemu yang luar biasa di sini..." 
             minHeight={350}

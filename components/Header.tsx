@@ -6,7 +6,7 @@ import { arrayUnion, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { AlertTriangle, Bell, BellRing, CalendarClock, Check, Heart, Info, Menu, MessageSquareQuote } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Appearance, Image, Modal, ScrollView, TouchableOpacity, View } from 'react-native'; // <-- IMPORT IMAGE
+import { Alert, Animated, Appearance, Image, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettings } from '../hooks/use-settings';
 import { useAuth } from '../lib/auth-context';
@@ -266,46 +266,97 @@ export function Header({ translateY }: HeaderProps) {
           } : {}
         ]}
       >
-        <View className="flex-row items-center justify-between px-4 py-3">
+        <View className="flex-row items-center justify-between px-5 py-3">
           
-          <View className="flex-row items-center gap-2.5">
-            {/* FIX: MENGGUNAKAN LOGO CUSTOM DARI ASSETS */}
-            <View className="w-8 h-8 rounded-lg items-center justify-center shadow-sm overflow-hidden" style={{ backgroundColor: primaryHex }}>
+          <View className="flex-row items-center gap-3">
+            {/* FIX: LOGO DENGAN BACKGROUND TRANSLUCENT DINAMIS */}
+            <View 
+              className="w-10 h-10 items-center justify-center rounded-[12px] border"
+              style={{ backgroundColor: `${primaryHex}15`, borderColor: `${primaryHex}30` }}
+            >
               <Image 
                 source={require('../assets/images/icon.png')} 
-                style={{ width: '100%', height: '100%' }} 
-                resizeMode="cover" 
+                style={{ width: '70%', height: '70%' }} 
+                resizeMode="contain" 
               />
             </View>
-            <CustomText className="font-bold text-xl tracking-tight" style={{ color: textColor }}>Nexa</CustomText>
+            <CustomText className="font-black text-3xl tracking-tight" style={{ color: textColor }}>Nexa</CustomText>
           </View>
 
-          <View className="flex-row items-center gap-1">
-            {user && (
-              <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsNotifOpen(true); }} className="p-2 rounded-full relative">
-                {unreadCount > 0 ? (
-                  <>
-                    <BellRing color="#f97316" size={22} />
-                    <View className="absolute top-1.5 right-2 w-3 h-3 bg-red-500 rounded-full border-2" style={{ borderColor: isDark ? '#09090b' : '#ffffff' }} />
-                  </>
-                ) : (
-                  <Bell color={mutedColor} size={22} />
-                )}
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsMenuOpen(true); }} className="p-2 rounded-full">
-              <Menu color={textColor} size={22} />
+          <View className="flex-row items-center">
+            {/* FIX: ICON MENU BURGER DENGAN INDIKATOR NOTIFIKASI */}
+            <TouchableOpacity 
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsMenuOpen(true); }} 
+              className="p-2 rounded-full relative"
+            >
+              <Menu color={textColor} size={28} strokeWidth={2.5} />
+              
+              {/* Titik Merah Notifikasi */}
+              {user && unreadCount > 0 && (
+                <View 
+                  className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2" 
+                  style={{ borderColor: isDark ? '#18181b' : '#ffffff' }} 
+                />
+              )}
             </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
 
-      {/* MODAL NOTIFIKASI */}
+      {/* MODAL MENU PENGATURAN & NOTIFIKASI */}
+      <Modal visible={isMenuOpen} transparent animationType="fade">
+        <TouchableOpacity activeOpacity={1} onPress={() => setIsMenuOpen(false)} className="flex-1 bg-black/50 justify-start items-end pt-[70px] pr-4">
+          <TouchableOpacity activeOpacity={1} className="w-64 rounded-3xl shadow-2xl border p-2" style={{ backgroundColor: cardBgColor, borderColor }}>
+            <CustomText className="text-[10px] font-bold uppercase tracking-widest px-4 py-3" style={{ color: mutedColor }}>Menu Nexa</CustomText>
+            
+            {/* OPSI NOTIFIKASI */}
+            {user && (
+              <TouchableOpacity 
+                onPress={() => { 
+                  setIsMenuOpen(false); 
+                  setTimeout(() => setIsNotifOpen(true), 150); // Buka modal notif setelah menu tertutup
+                }} 
+                className="flex-row items-center justify-between p-3.5 rounded-2xl mb-1 border" 
+                style={{ backgroundColor: isDark ? '#27272a50' : '#f4f4f5', borderColor: unreadCount > 0 ? `${primaryHex}50` : 'transparent' }}
+              >
+                <View className="flex-row items-center">
+                  {unreadCount > 0 ? <BellRing color={primaryHex} size={20} /> : <Bell color={textColor} size={20} />}
+                  <CustomText className="ml-3 font-bold text-sm" style={{ color: textColor }}>Notifikasi</CustomText>
+                </View>
+                {unreadCount > 0 && (
+                  <View className="bg-red-500 px-2.5 py-0.5 rounded-full">
+                    <CustomText className="text-[10px] font-bold text-white">{unreadCount}</CustomText>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            
+            <View className="w-full h-px bg-border/50 my-1" />
+
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/about' as any); }} className="flex-row items-center p-3.5 rounded-2xl mb-1" style={{ backgroundColor: 'transparent' }}>
+              <Info color="#3b82f6" size={20} />
+              <CustomText className="ml-3 font-bold text-sm" style={{ color: textColor }}>Tentang Aplikasi</CustomText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/feedback' as any); }} className="flex-row items-center p-3.5 rounded-2xl mb-1" style={{ backgroundColor: 'transparent' }}>
+              <MessageSquareQuote color="#22c55e" size={20} />
+              <CustomText className="ml-3 font-bold text-sm" style={{ color: textColor }}>Kirim Masukan</CustomText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/funding' as any); }} className="flex-row items-center p-3.5 rounded-2xl mt-1 bg-rose-500/10">
+              <Heart color="#f43f5e" size={20} />
+              <CustomText className="ml-3 font-bold text-sm text-rose-500">Dukung Nexa</CustomText>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* MODAL NOTIFIKASI (DIBUKA DARI MENU) */}
       <Modal visible={isNotifOpen} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setIsNotifOpen(false)} className="flex-1 bg-black/50 justify-start items-end pt-[70px] pr-4">
-          <TouchableOpacity activeOpacity={1} className="w-[85%] max-h-[70%] rounded-3xl shadow-2xl overflow-hidden border" style={{ backgroundColor: cardBgColor, borderColor }}>
-            <View className="px-5 py-4 border-b flex-row items-center justify-between bg-muted/30" style={{ borderColor: `${borderColor}50` }}>
-              <CustomText className="font-bold text-base" style={{ color: textColor }}>Notifikasi</CustomText>
+        <TouchableOpacity activeOpacity={1} onPress={() => setIsNotifOpen(false)} className="flex-1 bg-black/60 justify-center items-center p-4">
+          <TouchableOpacity activeOpacity={1} className="w-full max-w-sm max-h-[70%] rounded-[2rem] shadow-2xl overflow-hidden border" style={{ backgroundColor: cardBgColor, borderColor }}>
+            <View className="px-5 py-4 border-b flex-row items-center justify-between bg-muted/20" style={{ borderColor: `${borderColor}50` }}>
+              <CustomText className="font-black text-lg" style={{ color: textColor }}>Notifikasi</CustomText>
               {unreadCount > 0 && (
                 <View className="bg-red-500/10 px-2.5 py-1 rounded-full">
                   <CustomText className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{unreadCount} Baru</CustomText>
@@ -355,29 +406,6 @@ export function Header({ translateY }: HeaderProps) {
         </TouchableOpacity>
       </Modal>
 
-      {/* MODAL MENU PENGATURAN */}
-      <Modal visible={isMenuOpen} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setIsMenuOpen(false)} className="flex-1 bg-black/50 justify-start items-end pt-[70px] pr-4">
-          <TouchableOpacity activeOpacity={1} className="w-56 rounded-3xl shadow-2xl border p-2" style={{ backgroundColor: cardBgColor, borderColor }}>
-            <CustomText className="text-[10px] font-bold uppercase tracking-widest px-4 py-3" style={{ color: mutedColor }}>Pintasan</CustomText>
-            
-            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/about' as any); }} className="flex-row items-center p-3.5 rounded-2xl mb-1" style={{ backgroundColor: isDark ? '#27272a50' : '#f4f4f5' }}>
-              <Info color="#3b82f6" size={18} />
-              <CustomText className="ml-3 font-bold text-sm" style={{ color: textColor }}>Tentang Aplikasi</CustomText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/feedback' as any); }} className="flex-row items-center p-3.5 rounded-2xl mb-1" style={{ backgroundColor: isDark ? '#27272a50' : '#f4f4f5' }}>
-              <MessageSquareQuote color="#22c55e" size={18} />
-              <CustomText className="ml-3 font-bold text-sm" style={{ color: textColor }}>Kirim Masukan</CustomText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity onPress={() => { setIsMenuOpen(false); router.push('/funding' as any); }} className="flex-row items-center p-3.5 rounded-2xl bg-rose-500/10">
-              <Heart color="#f43f5e" size={18} />
-              <CustomText className="ml-3 font-bold text-sm text-rose-500">Dukung Nexa</CustomText>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </>
   );
 }

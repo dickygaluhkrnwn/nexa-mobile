@@ -210,7 +210,6 @@ export default function NotesScreen() {
     return sorted;
   };
 
-  // FIX: Menggunakan double bang (!!) agar mereturn pure boolean (true / false) bukan undefined
   const isSharedNote = (n: ExtNoteData): boolean => !!(n.collaborators && n.collaborators.length > 0);
 
   const generateTreeList = (notesList: ExtNoteData[]): TreeNodeData[] => {
@@ -237,8 +236,8 @@ export default function NotesScreen() {
 
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 70, paddingHorizontal: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
         
-        {/* KOMPONEN: Hero Card */}
-        <NotesHero totalNotes={notes.length} totalPublicNotes={totalPublicNotes} totalVaultNotes={totalVaultNotes} />
+        {/* FIX: Total Notes yang dilempar sekarang murni hanya Catatan (Publik + Brankas), tanpa tugas Todo */}
+        <NotesHero totalNotes={totalPublicNotes + totalVaultNotes} totalPublicNotes={totalPublicNotes} totalVaultNotes={totalVaultNotes} />
 
         {/* KOMPONEN: Action Buttons */}
         <NotesActions 

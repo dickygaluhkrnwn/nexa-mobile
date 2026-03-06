@@ -28,11 +28,10 @@ export function BottomNav(props: any) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark' || ((colorScheme as any) === 'system' && Appearance.getColorScheme() === 'dark');
 
-  // Definisi Warna Eksplisit (Anti-Gagal di React Native)
-  const inactiveColor = isDark ? '#a1a1aa' : '#71717a'; 
-  const bgColor = isDark ? '#09090b' : '#ffffff'; 
+  // Definisi Warna Eksplisit (Anti-Gagal)
+  const inactiveColor = isDark ? '#71717a' : '#a1a1aa'; 
   const cardBgColor = isDark ? '#18181b' : '#ffffff'; 
-  const borderColor = isDark ? '#27272a' : '#e4e4e7'; 
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'; 
   const textColor = isDark ? '#ffffff' : '#09090b'; 
 
   const navItems = [
@@ -43,13 +42,13 @@ export function BottomNav(props: any) {
     { path: "/profile", label: "Profil", icon: User },
   ];
 
-  // FIX: Menggunakan HEX Color langsung agar tidak terpengaruh bug NativeWind
+  // Menu pop-up modern
   const popupMenu = [
-    { id: "/todo", label: "Tugas Baru", icon: CheckSquare, hex: "#f97316" }, // Orange
-    { id: "voice", label: "Suara Pintar", icon: Mic, hex: "#f43f5e" }, // Rose
-    { id: "gallery", label: "Dari Galeri", icon: ImageIcon, hex: "#6366f1" }, // Indigo
-    { id: "camera", label: "Pindai Kamera", icon: Camera, hex: "#3b82f6" }, // Blue
-    { id: "text", label: "Catatan Teks", icon: Type, hex: primaryHex }, // Dynamic Primary
+    { id: "/todo", label: "Tugas Baru", icon: CheckSquare, hex: "#f97316" }, 
+    { id: "voice", label: "Suara Pintar", icon: Mic, hex: "#f43f5e" }, 
+    { id: "gallery", label: "Dari Galeri", icon: ImageIcon, hex: "#6366f1" }, 
+    { id: "camera", label: "Pindai Kamera", icon: Camera, hex: "#3b82f6" }, 
+    { id: "text", label: "Catatan Teks", icon: Type, hex: primaryHex }, 
   ];
 
   const handleCreateOption = (modeId: string) => {
@@ -61,7 +60,6 @@ export function BottomNav(props: any) {
     } else if (modeId === "text") {
       router.push("/create" as any); 
     } else {
-      // Sinyal ini ditangkap oleh useEffect di app/create.tsx untuk memicu hardware!
       router.push({ pathname: "/create", params: { mode: modeId } } as any);
     }
   };
@@ -73,79 +71,98 @@ export function BottomNav(props: any) {
 
   const plusIconStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ rotate: withSpring(isOpen ? "135deg" : "0deg", { damping: 12, stiffness: 90 }) }],
+      transform: [{ rotate: withSpring(isOpen ? "135deg" : "0deg", { damping: 14, stiffness: 120 }) }],
     };
   });
 
+  // Margin dinamis untuk menjaga jarak aman dari indikator home iPhone
+  const navBottomMargin = Math.max(insets.bottom, 16);
+
   return (
-    <View
-      className="flex-row items-center justify-between px-2"
-      style={{ 
-        backgroundColor: bgColor,
-        borderTopWidth: 1,
-        borderTopColor: borderColor,
-        paddingBottom: insets.bottom || 12, 
-        height: 65 + (insets.bottom || 12),
-        elevation: 20, 
-        shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12 
-      }}
-    >
-      {navItems.map((item) => {
-        if (item.isMain) {
-          return (
-            <View key="create-btn" className="relative items-center justify-center w-1/5 -top-6">
+    <>
+      {/* WADAH UTAMA FLOATING PILL */}
+      <View
+        className="absolute left-4 right-4 z-40"
+        style={{ bottom: navBottomMargin }}
+      >
+        <View
+          className="flex-row items-center justify-between px-2 rounded-[2rem] border"
+          style={{ 
+            backgroundColor: isDark ? 'rgba(24, 24, 27, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: borderColor,
+            height: 70,
+            shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 
+          }}
+        >
+          {navItems.map((item) => {
+            
+            // Render Tombol Tengah (Create)
+            if (item.isMain) {
+              return (
+                <View key="create-btn" className="relative items-center justify-center w-1/5 -top-4">
+                  <TouchableOpacity
+                    onPress={toggleMenu}
+                    activeOpacity={0.9}
+                    className="w-14 h-14 rounded-full items-center justify-center shadow-xl"
+                    style={{ 
+                      backgroundColor: primaryHex, 
+                      borderWidth: 4, 
+                      borderColor: isDark ? '#18181b' : '#ffffff', // Efek "Cutout" pada pill
+                      shadowColor: primaryHex, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 10 
+                    }}
+                  >
+                    <Animated.View style={plusIconStyle}>
+                      <Plus color="#ffffff" size={28} strokeWidth={3} />
+                    </Animated.View>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+
+            const isFocused = pathname === item.path;
+            const Icon = item.icon;
+
+            const onPress = () => {
+              if (!isFocused) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
+                router.push(item.path as any);
+              }
+            };
+
+            // Render Tab Item Biasa
+            return (
               <TouchableOpacity
-                onPress={toggleMenu}
-                activeOpacity={0.9}
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg shadow-black/20"
-                style={{ backgroundColor: primaryHex, borderWidth: 4, borderColor: bgColor }}
+                key={item.path}
+                onPress={onPress}
+                activeOpacity={0.6}
+                className="flex-1 items-center justify-center h-full pt-1"
               >
-                <Animated.View style={plusIconStyle}>
-                  <Plus color="#ffffff" size={32} strokeWidth={2.5} />
-                </Animated.View>
+                <View className="items-center justify-center">
+                  <Icon color={isFocused ? primaryHex : inactiveColor} size={22} strokeWidth={isFocused ? 2.5 : 2} />
+                </View>
+                <CustomText 
+                  className="text-[9px] mt-1 font-bold"
+                  style={{ color: isFocused ? primaryHex : inactiveColor, opacity: isFocused ? 1 : 0.7 }}
+                >
+                  {item.label}
+                </CustomText>
               </TouchableOpacity>
-            </View>
-          );
-        }
+            );
+          })}
+        </View>
+      </View>
 
-        const isFocused = pathname === item.path;
-        const Icon = item.icon;
-
-        const onPress = () => {
-          if (!isFocused) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
-            router.push(item.path as any);
-          }
-        };
-
-        return (
-          <TouchableOpacity
-            key={item.path}
-            onPress={onPress}
-            activeOpacity={0.6}
-            className="flex-1 items-center justify-center h-full pt-2"
-          >
-            <View 
-              className={`items-center justify-center px-4 py-1.5 rounded-2xl`}
-              style={{ backgroundColor: isFocused ? `${primaryHex}20` : 'transparent' }}
-            >
-              <Icon color={isFocused ? primaryHex : inactiveColor} size={22} strokeWidth={isFocused ? 2.5 : 2} />
-            </View>
-            <CustomText 
-              className="text-[10px] mt-1 font-bold"
-              style={{ color: isFocused ? primaryHex : inactiveColor }}
-            >
-              {item.label}
-            </CustomText>
-          </TouchableOpacity>
-        );
-      })}
-
+      {/* OVERLAY MODAL UNTUK MENU CREATE */}
       <Modal visible={isOpen} transparent animationType="fade">
-        <Pressable className="flex-1 bg-black/70" onPress={toggleMenu}>
+        <Pressable 
+          className="flex-1" 
+          style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.4)' }} 
+          onPress={toggleMenu}
+        >
           
-          <View className="absolute bottom-36 w-full items-center">
-            <View className="flex-col items-end gap-3 w-48">
+          {/* Daftar Opsi Menu Melayang */}
+          <View className="absolute w-full items-center" style={{ bottom: navBottomMargin + 95 }}>
+            <View className="flex-col items-center gap-3 w-56">
               {popupMenu.map((menu, idx) => {
                 const MenuIcon = menu.icon;
                 return (
@@ -153,24 +170,26 @@ export function BottomNav(props: any) {
                     key={menu.id} 
                     entering={FadeInDown.delay(idx * 50).springify().damping(14)} 
                     exiting={FadeOutDown.duration(150)}
+                    className="w-full"
                   >
                     <TouchableOpacity
                       onPress={() => handleCreateOption(menu.id)}
-                      activeOpacity={0.7}
-                      className="flex-row items-center gap-3"
+                      activeOpacity={0.8}
+                      className="flex-row items-center gap-4 px-5 py-3.5 rounded-[1.5rem] shadow-lg border"
+                      style={{ backgroundColor: cardBgColor, borderColor: borderColor }}
                     >
+                      <View 
+                        className="w-10 h-10 rounded-full items-center justify-center"
+                        style={{ backgroundColor: `${menu.hex}15` }} 
+                      >
+                        <MenuIcon color={menu.hex} size={20} strokeWidth={2.5} />
+                      </View>
                       <CustomText 
-                        className="text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm"
-                        style={{ backgroundColor: cardBgColor, borderColor: borderColor, borderWidth: 1, color: textColor }}
+                        className="text-sm font-extrabold"
+                        style={{ color: textColor }}
                       >
                         {menu.label}
                       </CustomText>
-                      <View 
-                        className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-2 border-background/20`}
-                        style={{ backgroundColor: menu.hex }} // Menerapkan Hex Color
-                      >
-                        <MenuIcon color="#fff" size={24} strokeWidth={2.5} />
-                      </View>
                     </TouchableOpacity>
                   </Animated.View>
                 );
@@ -178,26 +197,32 @@ export function BottomNav(props: any) {
             </View>
           </View>
 
+          {/* Duplikat Tombol Create di atas Overlay agar transisi X mulus */}
           <View 
-            className="absolute bottom-0 w-full flex-row items-center justify-center pointer-events-none" 
-            style={{ paddingBottom: insets.bottom || 12, height: 65 + (insets.bottom || 12) }}
+            className="absolute left-4 right-4 flex-row items-center justify-center pointer-events-none z-50" 
+            style={{ bottom: navBottomMargin, height: 70 }}
           >
-            <View className="relative items-center justify-center w-1/5 -top-6">
-              <View 
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg pointer-events-auto shadow-black/50"
-                style={{ backgroundColor: cardBgColor, borderColor: bgColor, borderWidth: 4 }}
+            <View className="relative items-center justify-center w-1/5 -top-4 pointer-events-auto">
+              <TouchableOpacity
+                onPress={toggleMenu}
+                activeOpacity={0.9}
+                className="w-14 h-14 rounded-full items-center justify-center shadow-xl"
+                style={{ 
+                  backgroundColor: primaryHex, 
+                  borderWidth: 4, 
+                  borderColor: isDark ? '#18181b' : '#ffffff', 
+                  shadowColor: primaryHex, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 10 
+                }}
               >
-                <TouchableOpacity onPress={toggleMenu} activeOpacity={0.9} className="w-full h-full items-center justify-center">
-                   <Animated.View style={plusIconStyle}>
-                     <Plus color={textColor} size={32} strokeWidth={2.5} />
-                   </Animated.View>
-                </TouchableOpacity>
-              </View>
+                <Animated.View style={plusIconStyle}>
+                  <Plus color="#ffffff" size={28} strokeWidth={3} />
+                </Animated.View>
+              </TouchableOpacity>
             </View>
           </View>
 
         </Pressable>
       </Modal>
-    </View>
+    </>
   );
 }

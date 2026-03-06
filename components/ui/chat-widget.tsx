@@ -3,7 +3,7 @@ import { usePathname, useRouter } from 'expo-router'; // <-- Import useRouter
 import { Bot, Send, User, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Appearance, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Appearance, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { useGemini } from '../../hooks/use-gemini';
 import { useSettings } from '../../hooks/use-settings';
 import { useAuth } from '../../lib/auth-context';
@@ -21,10 +21,13 @@ const accentColors: Record<string, string> = {
   amber: '#f59e0b', orange: '#f97316', rose: '#f43f5e', violet: '#8b5cf6',
 };
 
+// Ambil ukuran layar untuk membatasi pergerakan widget
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export function ChatWidget() {
   const { user } = useAuth();
   const pathname = usePathname();
-  const router = useRouter(); // <-- Inisialisasi router
+  const router = useRouter(); 
   const { callAI, isAiLoading } = useGemini();
   
   const { colorScheme } = useColorScheme();
@@ -48,6 +51,35 @@ export function ChatWidget() {
   
   // State untuk menyimpan list metadata catatan agar bisa dicocokkan jadi link
   const [allNotes, setAllNotes] = useState<{id: string, title: string, isTodo: boolean}[]>([]);
+
+  // =========================================================
+  // LOGIKA DRAGGABLE WIDGET
+  // =========================================================
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      // Hanya aktifkan drag jika user menggeser lebih dari 5px
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderGrant: () => {
+        // Kunci offset sebelum digeser
+        pan.setOffset({
+          x: (pan.x as any)._value,
+          y: (pan.y as any)._value
+        });
+        pan.setValue({ x: 0, y: 0 }); // Reset value
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false } // false karena mengubah layout
+      ),
+      onPanResponderRelease: () => {
+        pan.flattenOffset(); // Gabungkan offset agar posisinya permanen di tempat baru
+      }
+    })
+  ).current;
+  // =========================================================
 
   // Ambil list catatan saat modal chat dibuka
   useEffect(() => {
@@ -81,11 +113,9 @@ export function ChatWidget() {
       const notesData = await getUserNotes(user.uid);
       const typedNotes = notesData as (NoteData & { id: string })[];
       
-      // FIX: RAG Client-Side - Jangan filter isTodo, biarkan AI membaca tugas juga!
       const contextStr = typedNotes
-        .filter(n => !n.isHidden) // Jangan ikut sertakan catatan di Brankas (untuk keamanan)
+        .filter(n => !n.isHidden) 
         .map(n => {
-          // Beda perlakuan untuk Tugas vs Catatan Biasa
           if (n.isTodo) {
             const status = n.isCompleted ? "Selesai" : "Belum Selesai";
             const due = n.dueDate ? ` (Tenggat: ${n.dueDate})` : "";
@@ -96,7 +126,6 @@ export function ChatWidget() {
           }
         }).join('\n\n');
 
-      // FIX: Injeksi instruksi tegas agar AI membungkus judul dengan [[...]]
       const finalContext = contextStr 
         ? `Ini adalah ringkasan dari semua catatan dan tugas pengguna:\n${contextStr}\n\nINSTRUKSI KRUSIAL: Jika kamu menyebutkan judul catatan atau judul tugas sebagai sumber jawabanmu, WAJIB bungkus judul tersebut dengan kurung siku ganda persis seperti ini: [[Judul Catatannya]].` 
         : "Pengguna belum memiliki catatan atau tugas apa pun.";
@@ -116,18 +145,14 @@ export function ChatWidget() {
     }
   };
 
-  // --- CUSTOM PARSER (Bisa klik Link, Bold, Italic) ---
   const renderMessageContent = (text: string, role: 'user' | 'ai') => {
-    // Pecah string berdasarkan format [[Link]], **Bold**, dan *Italic*
     const parts = text.split(/(\[\[.*?\]\]|\*\*.*?\*\*|\*.*?\*)/g);
     
     return (
       <CustomText className="text-sm leading-relaxed" style={{ color: role === 'user' ? '#ffffff' : textColor }}>
         {parts.map((part, index) => {
-          // 1. Tangani Tautan Interaktif [[Catatan]]
           if (part.startsWith('[[') && part.endsWith(']]')) {
             const title = part.slice(2, -2);
-            // Cari catatan yang judulnya cocok (Abaikan huruf besar/kecil)
             const note = allNotes.find(n => n.title.toLowerCase() === title.toLowerCase());
             
             if (note) {
@@ -137,8 +162,7 @@ export function ChatWidget() {
                   style={{ color: isDark ? '#60a5fa' : '#2563eb', fontWeight: 'bold', textDecorationLine: 'underline' }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setIsOpen(false); // Tutup modal chat
-                    // Navigasi cerdas: Ke To-Do jika tugas, ke Notes jika catatan biasa
+                    setIsOpen(false); 
                     router.push(note.isTodo ? `/edit-todo/${note.id}` as any : `/edit/${note.id}` as any);
                   }}
                 >
@@ -146,21 +170,17 @@ export function ChatWidget() {
                 </CustomText>
               );
             }
-            // Jika catatan tidak ditemukan di database, render sebagai teks abu-abu miring
             return <CustomText key={index} style={{ fontStyle: 'italic', opacity: 0.6 }}>[{title}]</CustomText>;
           }
           
-          // 2. Tangani Teks Tebal (Bold)
           if (part.startsWith('**') && part.endsWith('**')) {
             return <CustomText key={index} style={{ fontWeight: 'bold' }}>{part.slice(2, -2)}</CustomText>;
           }
           
-          // 3. Tangani Teks Miring (Italic)
           if (part.startsWith('*') && part.endsWith('*')) {
             return <CustomText key={index} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</CustomText>;
           }
 
-          // 4. Teks Biasa
           return <CustomText key={index}>{part}</CustomText>;
         })}
       </CustomText>
@@ -169,9 +189,20 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* FLOATING BUTTON (WIDGET) */}
+      {/* FLOATING BUTTON (WIDGET - SEKARANG BISA DIGESER) */}
       {!isOpen && (
-        <View style={{ position: 'absolute', bottom: 90, right: 16, zIndex: 50 }}>
+        <Animated.View 
+          {...panResponder.panHandlers}
+          style={[
+            {
+              position: 'absolute', 
+              bottom: 90, 
+              right: 16, 
+              zIndex: 50,
+              transform: [{ translateX: pan.x }, { translateY: pan.y }] 
+            }
+          ]}
+        >
           <TouchableOpacity
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsOpen(true); }}
             activeOpacity={0.8}
@@ -180,7 +211,7 @@ export function ChatWidget() {
           >
             <Bot color="#ffffff" size={26} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       )}
 
       {/* CHAT MODAL */}
@@ -225,7 +256,6 @@ export function ChatWidget() {
                     className={`max-w-[75%] p-4 rounded-2xl ${msg.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}
                     style={{ backgroundColor: msg.role === 'user' ? primaryHex : (isDark ? '#27272a' : '#f4f4f5') }}
                   >
-                    {/* Render Pesan Menggunakan Custom Parser Baru */}
                     {renderMessageContent(msg.text, msg.role)}
                   </View>
 

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, CornerDownRight, LockKeyhole, MoreVertical, Users } from 'lucide-react-native';
+import { ChevronDown, ChevronRight, CornerDownRight, LockKeyhole, MoreVertical } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { Appearance, Text, TouchableOpacity, View } from 'react-native';
@@ -40,6 +40,8 @@ export function NoteCard({ note, viewMode, isVaultOpen, isShared, isExpanded, on
   
   let currentLeftBorderColor = primaryHex; 
   
+  // Warna garis pinggir kiri (border-left) tetap kita pertahankan 
+  // sebagai penanda halus (subtle) kalau ini adalah catatan bersama
   if (note.isPinned) currentLeftBorderColor = neutralLeftBorder; 
   else if (isShared) currentLeftBorderColor = sharedColor; 
   else if (isVaultOpen) currentLeftBorderColor = '#a855f7'; 
@@ -81,8 +83,8 @@ export function NoteCard({ note, viewMode, isVaultOpen, isShared, isExpanded, on
                 style={{ fontSize: viewMode === 'grid' ? 14 : 15, color: textColor, lineHeight: 20, fontFamily }} 
                 numberOfLines={2}
               >
+                {/* Ikon Gembok Brankas tetap ada, tapi Ikon Users Bersama sudah dihapus */}
                 {isVaultOpen && <LockKeyhole color="#a855f7" size={14} style={{ marginRight: 4, marginTop: 2 }} />}
-                {isShared && !note.isPinned && <Users color={sharedColor} size={14} style={{ marginRight: 4, marginTop: 2 }} />}
                 {note.title || "Tanpa Judul"}
               </Text>
             </View>

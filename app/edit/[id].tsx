@@ -116,7 +116,6 @@ export default function EditNoteScreen() {
           const currentUserCollab = collabs.find((c: any) => c.email === user.email);
           
           if (owner === user.uid || currentUserCollab || !noteData.isHidden) {
-            // --- JIKA DIIZINKAN ---
             setNoteOwnerId(owner);
             setCollaborators(collabs);
 
@@ -139,7 +138,6 @@ export default function EditNoteScreen() {
               } catch (e) { setFlashcardsHistory([]); }
             }
           } else {
-            // --- JIKA TIDAK DIIZINKAN ---
             Alert.alert("Akses Ditolak", "Ini adalah Brankas Pribadi milik orang lain. Kamu tidak punya akses.");
             router.replace("/notes");
           }
@@ -159,7 +157,6 @@ export default function EditNoteScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, id]);
 
-  // --- AMBIL DATA CATATAN LAIN UNTUK PILIHAN INDUK ---
   useEffect(() => {
     if (user && id && isOwner) {
       const validId = Array.isArray(id) ? id[0] : id;
@@ -215,7 +212,6 @@ export default function EditNoteScreen() {
     );
   };
 
-  // --- LOGIKA MENAMBAH KOLABORATOR ---
   const handleAddCollaborator = () => {
     if (!collabEmailInput.trim() || !collabEmailInput.includes('@')) {
       return Alert.alert("Email Tidak Valid", "Masukkan alamat email yang benar.");
@@ -285,14 +281,29 @@ export default function EditNoteScreen() {
           )}
         </View>
 
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-1">
+          {/* FIX UI: TOMBOL PRIVASI PINDAH KE HEADER (IKON SAJA) */}
+          {isOwner && (
+            <TouchableOpacity 
+              onPress={() => setIsHidden(!isHidden)} 
+              className="p-2 rounded-full border transition-colors mr-1"
+              style={{ 
+                backgroundColor: isHidden ? '#a855f715' : 'transparent', 
+                borderColor: isHidden ? '#a855f750' : 'transparent' 
+              }}
+            >
+              {isHidden ? <Lock color="#a855f7" size={18} /> : <Unlock color={mutedColor} size={18} />}
+            </TouchableOpacity>
+          )}
+
           {/* Tombol Modal Mabar */}
           {isOwner && (
-            <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-2 rounded-full bg-blue-500/10 border border-blue-500/20">
+            <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-2 rounded-full bg-blue-500/10 border border-blue-500/20 mr-1">
               <UserPlus color="#3b82f6" size={18} />
             </TouchableOpacity>
           )}
           
+          {/* Tombol Hapus */}
           {isOwner && (
             <TouchableOpacity onPress={handleDelete} className="p-2 rounded-full bg-red-500/10 border border-red-500/20 mr-2">
               <Trash2 color="#ef4444" size={18} />
@@ -315,6 +326,22 @@ export default function EditNoteScreen() {
         nestedScrollEnabled={true}
       >
         
+        {/* FIX UI: AREA BREADCRUMB PARENT NOTE (MIPIR NOTION) */}
+        {canEdit && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setShowParentModal(true)}
+            className="flex-row items-center mb-1.5 self-start"
+          >
+            <FolderTree color={mutedColor} size={14} style={{ marginRight: 6 }} />
+            <CustomText className="text-xs font-bold" style={{ color: parentId ? primaryHex : mutedColor }}>
+              {parentId
+                ? `${availableNotes.find(n => n.id === parentId)?.title || "Terpilih"} /`
+                : "Catatan Utama /"}
+            </CustomText>
+          </TouchableOpacity>
+        )}
+
         {/* INPUT JUDUL */}
         <TextInput
           placeholder="Judul Catatan..."
@@ -357,40 +384,6 @@ export default function EditNoteScreen() {
             </View>
           )}
         </View>
-
-        {/* --- AREA PILIH INDUK (PARENT NOTE) RESTORED! --- */}
-        {canEdit && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setShowParentModal(true)}
-            className="flex-row items-center px-3 py-2.5 rounded-xl border mb-4 self-start shadow-sm"
-            style={{ backgroundColor: isDark ? '#27272a50' : '#f4f4f5', borderColor: borderColor }}
-          >
-            <FolderTree color={mutedColor} size={16} />
-            <CustomText className="text-xs font-bold ml-2" style={{ color: parentId ? textColor : mutedColor }}>
-              {parentId
-                ? `Induk: ${availableNotes.find(n => n.id === parentId)?.title || "Terpilih"}`
-                : "Catatan Utama (Bukan Sub-Catatan)"}
-            </CustomText>
-          </TouchableOpacity>
-        )}
-
-        {/* TOMBOL PRIVASI (HANYA OWNER) */}
-        {isOwner && (
-          <View className="flex-row mt-2 mb-2">
-            <TouchableOpacity 
-              onPress={() => setIsHidden(!isHidden)} 
-              activeOpacity={0.7}
-              className="flex-row items-center px-3 py-2 rounded-xl border transition-colors"
-              style={{ backgroundColor: isHidden ? '#a855f715' : cardBgColor, borderColor: isHidden ? '#a855f750' : borderColor }}
-            >
-              {isHidden ? <Lock color="#a855f7" size={14} style={{ marginRight: 6 }} /> : <Unlock color={mutedColor} size={14} style={{ marginRight: 6 }} />}
-              <CustomText className="text-xs font-bold" style={{ color: isHidden ? '#a855f7' : mutedColor }}>
-                {isHidden ? "Terkunci di Brankas" : "Catatan Publik"}
-              </CustomText>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* AI TOOLBAR (HANYA BISA DIAKSES JIKA PUNYA HAK EDIT) */}
         {canEdit && (

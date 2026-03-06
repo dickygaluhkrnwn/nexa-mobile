@@ -1,7 +1,7 @@
-import { BrainCircuit, Clock, Target } from 'lucide-react-native';
+import { Activity, BrainCircuit, Clock, Target } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Appearance, Text, View } from 'react-native'; // <-- PAKE TEXT ASLI
+import { ActivityIndicator, Appearance, Text, View } from 'react-native';
 import { useSettings } from '../../hooks/use-settings';
 import { useAuth } from '../../lib/auth-context';
 import { getUserFocusSessions, getUserNotes } from '../../lib/notes-service';
@@ -102,12 +102,23 @@ export function FocusAnalytics() {
   return (
     <View className="mb-2">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="font-bold text-base" style={{ fontFamily, color: textColor }}>
-          Statistik Fokus
-        </Text>
-        <Text className="text-xs font-bold uppercase tracking-widest" style={{ fontFamily, color: primaryHex }}>
-          Minggu Ini
-        </Text>
+        {/* FIX UI: Diselaraskan dengan Recent Notes & Today Focus */}
+        <View>
+          <View className="flex-row items-center gap-2">
+            <Activity color={primaryHex} size={20} />
+            <Text className="text-lg font-bold" style={{ fontFamily, color: textColor }}>
+              Statistik Fokus
+            </Text>
+          </View>
+          <Text className="text-xs mt-0.5" style={{ fontFamily, color: mutedColor }}>
+            Lacak jam produktif dan kinerjamu.
+          </Text>
+        </View>
+        <View className="px-2.5 py-1 rounded-md border" style={{ backgroundColor: `${primaryHex}15`, borderColor: `${primaryHex}30` }}>
+          <Text className="text-[9px] font-bold uppercase tracking-widest" style={{ fontFamily, color: primaryHex }}>
+            Minggu Ini
+          </Text>
+        </View>
       </View>
 
       <View className="flex-row gap-3">
