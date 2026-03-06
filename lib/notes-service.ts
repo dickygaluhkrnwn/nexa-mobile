@@ -96,24 +96,29 @@ export const getUserNotes = async (userId: string, userEmail?: string) => {
     let collabNotes: any[] = [];
 
     // Query 2: Tarik catatan di mana user diundang sebagai kolaborator
-    // Karena Firestore sulit melakukan query array of objects secara kompleks, 
-    // kita tarik semua data yang mengandung kata kunci email (nanti kita filter manual di client jika perlu)
     if (userEmail) {
-      // Kita pakai pendekatan paling aman: Tarik catatan yang BUKAN milik kita
-      const q2 = query(notesRef, where("userId", "!=", userId));
-      const snapshot2 = await getDocs(q2);
-      
-      const potentialCollabs = snapshot2.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
+      try {
+        // FIX UTAMA: Jangan gunakan "!=". Firebase akan memblokir karena mencoba membaca Brankas orang lain.
+        // Kita hanya mengambil catatan publik ("isHidden == false") karena itu yang diizinkan oleh Rules.
+        const q2 = query(notesRef, where("isHidden", "==", false));
+        const snapshot2 = await getDocs(q2);
+        
+        const potentialCollabs = snapshot2.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[];
 
-      // Filter manual di sisi klien (karena jumlah data tidak sampai puluhan ribu, ini sangat cepat)
-      collabNotes = potentialCollabs.filter(note => 
-        note.collaborators && 
-        Array.isArray(note.collaborators) && 
-        note.collaborators.some((c: any) => c.email === userEmail)
-      );
+        // Filter manual di sisi klien untuk menemukan mana yang ada email kita
+        collabNotes = potentialCollabs.filter(note => 
+          note.userId !== userId && // Jangan masukkan catatan milik sendiri lagi
+          note.collaborators && 
+          Array.isArray(note.collaborators) && 
+          note.collaborators.some((c: any) => c.email === userEmail)
+        );
+      } catch (collabError) {
+        // Jika pencarian kolaborasi error, kita biarkan saja agar catatan utama tetap tampil
+        console.error("Gagal menarik data kolaborasi:", collabError);
+      }
     }
 
     // Gabungkan hasilnya
